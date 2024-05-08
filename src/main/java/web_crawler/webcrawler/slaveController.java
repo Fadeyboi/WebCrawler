@@ -23,22 +23,32 @@ public class slaveController {
     }
     @FXML
     private void initialize() throws IOException {
-        System.out.println("TEST");
-        System.out.println(InetAddress.getLocalHost().getHostAddress());
         ipAddressText.setText("IP address of Slave is: " + InetAddress.getLocalHost().getHostAddress());
         TextFormatter<String> portFormatter = new TextFormatter<>(filter);
         portInput.setTextFormatter(portFormatter);
     }
     UnaryOperator<TextFormatter.Change> filter = change -> {
         String newCharacter = change.getText();
-        String fullText = change.getControlNewText();
-        if(newCharacter.matches("[0-9]*"))
-            if(fullText.length()<7)
-               if(!fullText.isEmpty())
-                   if(Integer.parseInt(fullText)<65536)
-                       return change;
 
+        if (!change.isContentChange()) {
+            return change;
+        }
+
+        String fullText = change.getControlNewText();
+        if (newCharacter.isEmpty()) {
+            return change;
+        }
+        if (newCharacter.matches("[0-9]*")) {
+            if (fullText.length() < 7) {
+                if (!fullText.isEmpty()) {
+                    if (Integer.parseInt(fullText) < 65536) {
+                        return change;
+                    }
+                }
+            }
+        }
         return null;
     };
+
 
 }

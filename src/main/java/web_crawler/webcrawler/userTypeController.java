@@ -8,18 +8,20 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class userTypeController {
     @FXML
     RadioButton isMaster;
+
+
     @FXML
     private void userTypeSelected() throws IOException {
-        System.out.println(isMaster.isSelected());
         Parent root;
         if(!isMaster.isSelected())
-            root = FXMLLoader.load(getClass().getResource("slave.fxml"));
+            root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("slave.fxml")));
         else
-            root = FXMLLoader.load(getClass().getResource("master.fxml"));
+            root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("master.fxml")));
 
         Stage stage = (Stage) isMaster.getScene().getWindow();
         stage.setScene(new Scene(root));

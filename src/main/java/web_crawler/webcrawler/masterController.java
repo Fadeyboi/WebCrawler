@@ -38,7 +38,10 @@ public class masterController {
     }
 
     @FXML
+    TextArea updates;
+    @FXML
     private void startButtonPressed() throws IOException {
+        updates.clear();
         //TEMP
         slaveIPs.clear();
         seedURLs.clear();
@@ -56,25 +59,26 @@ public class masterController {
         seedURLs.addAll(List.of(urlField.getText().split("\n")));
         int numberOfSlaves = slaveIPs.size();
         System.out.println(numberOfSlaves);
-        for (int i = 0; i < numberOfSlaves; i++) {
+        for (int i = 0; i < numberOfSlaves; i++) { //saves URL
             splitSeedURLs.add(new ArrayList<>());
         }
-        for (int i = 0; i < seedURLs.size(); i++) {
+        for (int i = 0; i < seedURLs.size(); i++) { // splits the tasks
             splitSeedURLs.get(i % numberOfSlaves).add(seedURLs.get(i));
         }
 
-        for (int i = 0; i < splitSeedURLs.size(); i++) {
-            System.out.println("Slave " + (i + 1) + ": " + splitSeedURLs.get(i));
-        }
+        for (int i = 0; i < splitSeedURLs.size(); i++)
+//            System.out.println("Slave " + (i + 1) + ": " + splitSeedURLs.get(i));
+            updates.appendText("Slave number " +(i+1) + " tasked with " + splitSeedURLs.get(i) + "\n");
+
 
         int num = 0;
         for (String[] ip : slaveIPs) {
             try (Socket masterSocket = new Socket(ip[0], Integer.parseInt(ip[1]));
                  ObjectOutputStream oos = new ObjectOutputStream(masterSocket.getOutputStream())){
-                 oos.writeObject(splitSeedURLs.get(num));
-                 oos.writeObject(duplicate);
-                 oos.writeObject(levels);
-                 num++;
+                    oos.writeObject(splitSeedURLs.get(num)); //sends the URL
+                    oos.writeObject(duplicate); // sends a boolean flag if duplication is allowed
+                    oos.writeObject(levels); // sends the level of recursion
+                    num++;
             } catch (IOException e) {
                  System.out.println(e.getMessage());
             }

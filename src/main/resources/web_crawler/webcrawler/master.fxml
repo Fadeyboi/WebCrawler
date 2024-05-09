@@ -8,44 +8,49 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.text.Font?>
 
-<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="730.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="web_crawler.webcrawler.masterController">
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="646.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="web_crawler.webcrawler.masterController">
    <children>
       <Label layoutX="14.0" layoutY="7.0" text="Enter Slaves IP:Port (one slave per line):">
          <font>
             <Font size="18.0" />
          </font>
       </Label>
-      <Label layoutX="14.0" layoutY="307.0" text="Enter seed URLs (one URL per line):">
+      <Label layoutX="10.0" layoutY="224.0" text="Enter seed URLs (one URL per line):">
          <font>
             <Font size="18.0" />
          </font>
       </Label>
-      <CheckBox fx:id="duplicateCheck" layoutX="10.0" layoutY="620.0" mnemonicParsing="false" text="Enable Duplicate URL extraction?">
+      <CheckBox fx:id="duplicateCheck" layoutX="14.0" layoutY="439.0" mnemonicParsing="false" text="Enable Duplicate URL extraction?">
          <font>
             <Font size="14.0" />
          </font>
       </CheckBox>
-      <Label layoutX="10.0" layoutY="650.0" text="Max Levels (number between 0 and 2 inclusive):">
+      <Label layoutX="14.0" layoutY="469.0" text="Max Levels (number between 0 and 2 inclusive):">
          <font>
             <Font size="14.0" />
          </font>
       </Label>
-      <TextField fx:id="maxLevels" alignment="CENTER" layoutX="310.0" layoutY="645.0" prefHeight="30.0" prefWidth="30.0" promptText="0">
+      <TextField fx:id="maxLevels" alignment="CENTER" layoutX="314.0" layoutY="464.0" prefHeight="30.0" prefWidth="30.0" promptText="0">
          <font>
             <Font size="14.0" />
          </font>
       </TextField>
-      <Button fx:id="startButton" layoutX="275.0" layoutY="690.0" mnemonicParsing="false" onAction="#startButtonPressed" prefHeight="30.0" prefWidth="50.0" text="Start">
+      <Button fx:id="startButton" layoutX="366.0" layoutY="464.0" mnemonicParsing="false" onAction="#startButtonPressed" prefHeight="30.0" prefWidth="50.0" text="Start">
          <font>
             <Font size="14.0" />
          </font>
       </Button>
-      <TextArea fx:id="ipField" layoutX="10.0" layoutY="40.0" prefHeight="260.0" prefWidth="580.0" promptText="Ex. 192.168.0.1:80">
+      <TextArea fx:id="ipField" layoutX="10.0" layoutY="40.0" prefHeight="164.0" prefWidth="580.0" promptText="Ex. 192.168.0.1:80">
          <font>
             <Font size="16.0" />
          </font>
       </TextArea>
-      <TextArea fx:id="urlField" layoutX="10.0" layoutY="340.0" prefHeight="260.0" prefWidth="580.0" promptText="Ex. https://google.com">
+      <TextArea fx:id="urlField" layoutX="10.0" layoutY="259.0" prefHeight="164.0" prefWidth="580.0" promptText="Ex. https://google.com">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </TextArea>
+      <TextArea fx:id="updates" editable="false" layoutX="10.0" layoutY="510.0" prefHeight="123.0" prefWidth="580.0">
          <font>
             <Font size="16.0" />
          </font>

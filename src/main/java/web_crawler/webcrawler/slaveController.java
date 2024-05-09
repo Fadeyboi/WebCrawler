@@ -2,6 +2,7 @@ package web_crawler.webcrawler;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.text.Text;
@@ -17,16 +18,20 @@ public class slaveController {
     TextField portInput;
     @FXML
     Text ipAddressText;
+    @FXML
+    TextArea updates;
 
     @FXML
     private void runSlave() throws IOException, InterruptedException {
+        updates.setText("");
+        updates.setVisible(true);
         String portNumber = portInput.getText();
         String IP = InetAddress.getLocalHost().getHostAddress();
         if(portNumber.isEmpty()){
             System.out.println("Port number is empty.");
         }
         else {
-            new Slave(portNumber, IP);
+            new Slave(portNumber, IP, updates);
         }
     }
 
@@ -35,6 +40,7 @@ public class slaveController {
         ipAddressText.setText("IP address of Slave is: " + InetAddress.getLocalHost().getHostAddress());
         TextFormatter<String> portFormatter = new TextFormatter<>(filter);
         portInput.setTextFormatter(portFormatter);
+        updates.setVisible(false);
     }
     UnaryOperator<TextFormatter.Change> filter = change -> {
         String newCharacter = change.getText();

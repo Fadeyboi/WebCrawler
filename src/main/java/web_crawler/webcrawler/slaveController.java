@@ -9,18 +9,27 @@ import javafx.scene.text.Text;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.function.UnaryOperator;
 
 public class slaveController {
     @FXML
     TextField portInput;
-
     @FXML
     Text ipAddressText;
-    @FXML
-    private void runSlave(){
 
+    @FXML
+    private void runSlave() throws IOException, InterruptedException {
+        String portNumber = portInput.getText();
+        String IP = InetAddress.getLocalHost().getHostAddress();
+        if(portNumber.isEmpty()){
+            System.out.println("Port number is empty.");
+        }
+        else {
+            new Slave(portNumber, IP);
+        }
     }
+
     @FXML
     private void initialize() throws IOException {
         ipAddressText.setText("IP address of Slave is: " + InetAddress.getLocalHost().getHostAddress());
@@ -29,11 +38,9 @@ public class slaveController {
     }
     UnaryOperator<TextFormatter.Change> filter = change -> {
         String newCharacter = change.getText();
-
         if (!change.isContentChange()) {
             return change;
         }
-
         String fullText = change.getControlNewText();
         if (newCharacter.isEmpty()) {
             return change;
@@ -49,6 +56,7 @@ public class slaveController {
         }
         return null;
     };
+
 
 
 }

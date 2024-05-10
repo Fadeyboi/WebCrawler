@@ -4,14 +4,15 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import org.w3c.dom.ls.LSOutput;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
 import java.util.function.UnaryOperator;
 
 public class masterController {
@@ -30,13 +31,69 @@ public class masterController {
     public static ArrayList<ArrayList<String>> splitSeedURLs = new ArrayList<>();
     private boolean duplicate;
     private int levels = 0;
-
+    String USERNAME = "root";
+    String PASSWORD = "";
+    String URL = "jdbc:mysql://127.0.0.1:3306/mysql";
+    Connection DBcon;
     @FXML
     private void initialize() throws IOException {
         TextFormatter<String> portFormatter = new TextFormatter<>(filter);
         maxLevels.setTextFormatter(portFormatter);
-    }
+        new Thread(() -> {
+            System.out.println("Database manager running");
+            try(ServerSocket serverSocket = new ServerSocket(6500)){
+                while(!Thread.currentThread().isInterrupted()){
+                    System.out.println("Waiting for connection");
+                    Socket socket = serverSocket.accept();
+                    new Thread(() -> {
+                        System.out.println("NEW USER");
+                        try(ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream())){
+                            addURLtoDatabase((HashMap<String, ArrayList<String>>) objectInputStream.readObject());
+                        }catch (IOException e){
+                            System.out.println(e.getMessage());
+                        } catch (ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).start();
 
+                }
+            }catch (IOException e){
+                System.out.println(e.getMessage());
+            }
+        });
+    }
+    private boolean initializeConnection() {
+        System.out.println("INITIALIZING CONNECTION");
+        try{
+            DBcon = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            return true;
+        }catch (SQLException ignored){
+            System.out.println("ERROR INITIALIZING CONNECTION");
+            return false;
+        }
+
+    }
+    private synchronized void addURLtoDatabase(HashMap<String, ArrayList<String>> temp)  {
+        System.out.println("NEW ADDITION METHOD");
+        if(DBcon == null)
+            if(!initializeConnection())
+                return;
+        java.sql.Date date = new java.sql.Date( new Date().getTime());
+        for(String page: temp.keySet()){
+            System.out.println("PAGE: " + page);
+            for (String extractedURL: temp.get(page)){
+                try {
+                    Statement newRow = DBcon.createStatement();
+                    String queryStatement = String.format("INSERT INTO urls VALUES(NULL,'%s','%s','%s')", date,page,extractedURL);
+                    newRow.executeUpdate(queryStatement);
+                }catch (SQLException ignored){
+                    System.out.println(ignored.getMessage());
+                }
+
+                System.out.println("EXTRACTED URL: " + extractedURL);
+            }
+        }
+    }
     @FXML
     TextArea updates;
     @FXML
@@ -75,6 +132,7 @@ public class masterController {
         for (String[] ip : slaveIPs) {
             try (Socket masterSocket = new Socket(ip[0], Integer.parseInt(ip[1]));
                  ObjectOutputStream oos = new ObjectOutputStream(masterSocket.getOutputStream())){
+                    System.out.println("SOCKET: " + masterSocket.getInetAddress() + ":" + masterSocket.getPort());
                     oos.writeObject(splitSeedURLs.get(num)); //sends the URL
                     oos.writeObject(duplicate); // sends a boolean flag if duplication is allowed
                     oos.writeObject(levels); // sends the level of recursion

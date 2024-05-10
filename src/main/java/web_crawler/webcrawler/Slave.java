@@ -9,6 +9,8 @@ public class Slave {
     public Slave(String port, String IP, TextArea updates) throws InterruptedException {
         this.port = port;
         this.IP = IP;
+        updates.appendText("ServerSocket " +
+                "created. Waiting for connection from Master\n");
         System.out.println("New slave made, IP is: " + IP + ":" + port);
         Thread t1 = new Thread(new SlaveThread(port, updates));
         t1.start();

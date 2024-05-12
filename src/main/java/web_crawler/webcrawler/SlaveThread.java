@@ -17,6 +17,7 @@ public class SlaveThread implements Runnable {
     private int levels;
     private final boolean openConnection;
     private final TextArea updates;
+    private static HashSet<String> update = new HashSet<>();
 
 
     public SlaveThread (String port, TextArea updates) {
@@ -40,7 +41,7 @@ public class SlaveThread implements Runnable {
         URL runURL;
         Socket clientSocket = null;
         Thread secondThread = null;
-        StringBuilder update = new StringBuilder();
+
         try {
             if (openConnection) {
                 try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port))) {
@@ -52,10 +53,11 @@ public class SlaveThread implements Runnable {
                         System.out.println(URLs);
                         if(URLs.size() > 1) {
                             LinkedList<String> secondThreadLinkedList = new LinkedList<>();
-                            for (int i = (URLs.size() - 1) / 2; i < URLs.size(); i++) {
-                                secondThreadLinkedList.add(URLs.get(i));
-                                URLs.remove(URLs.get(i));
+                            int start = URLs.size() / 2;
+                            for (int i = URLs.size() - 1; i >= start; i--) {
+                                secondThreadLinkedList.addFirst(URLs.get(i));
                                 System.out.println(URLs.get(i));
+                                URLs.remove(i);
                             }
                             secondThread = new Thread(new SlaveThread(this.port, secondThreadLinkedList, this.duplicate,
                                     this.levels - 1, updates));
@@ -63,7 +65,7 @@ public class SlaveThread implements Runnable {
                             secondThread.start();
                         }
                         String updateMessage = "Slave Received: [" + URLs.toString() + "\nEnableDuplicates: "
-                                + duplicate + "\nMaxLevels: " + levels + "\n----------\n";
+                                + duplicate + "\nMaxLevels: " + levels + "\nHOSTS VISITED\n----------\n";
                             updates.setText(updateMessage);
                     } catch (ClassNotFoundException ignored) {}
                 } catch (IOException ignored) {}
@@ -86,20 +88,19 @@ public class SlaveThread implements Runnable {
                     while (matcher.find()) {
                         String group = matcher.group(1);
                         URI uri = URI.create(group);
-                        if(uri.isAbsolute()){
-                            System.out.println("group hostname: " + uri.getHost());
+                        if (uri.isAbsolute()) {
                             if (duplicate) {
                                 temporaryArrayList.add(group);
-                                if(!temporaryArrayList.contains(group))
-                                    update.append(group).append("\n");
-                                if(uri.getHost().equals(hostname))
+                                if (uri.getHost() != null)
+                                    update.add(uri.getHost());
+                                if (uri.getHost().equals(hostname))
                                     urlLinkedList.add(group);
-                            }
-                            else {
+                            } else {
                                 if (!temporaryArrayList.contains(group)) {
                                     temporaryArrayList.add(group);
-                                    update.append(group).append("\n");
-                                    if(uri.getHost().equals(hostname))
+                                    if (uri.getHost() != null)
+                                        update.add(uri.getHost());
+                                    if (uri.getHost().equals(hostname))
                                         urlLinkedList.add(group);
                                 }
                             }
@@ -108,9 +109,6 @@ public class SlaveThread implements Runnable {
                     extractedURLs.put(url, temporaryArrayList);
                 }
             }
-
-
-            updates.appendText(update + "----------\n");
 
             if (levels > 0){
                 Thread t1 = new Thread(new SlaveThread(this.port, this.urlLinkedList, this.duplicate,
@@ -125,7 +123,8 @@ public class SlaveThread implements Runnable {
                 sendExtractedURLs(clientSocket);
             }
 
-        } catch (IOException | InterruptedException ignored) {}
+        } catch (IOException | InterruptedException| IllegalArgumentException | NullPointerException ignored) {}
+
     }
 
     public void sendExtractedURLs(Socket socket) {
@@ -142,8 +141,13 @@ public class SlaveThread implements Runnable {
                 count++;
             }
         }
+        StringBuilder hostNames = new StringBuilder();
+        for (String hostName: update){
+            hostNames.append(hostName).append("\n");
+        }
+        updates.appendText(String.valueOf(hostNames));
         System.out.println("SIZE OF MAP: " + count);
-        updates.appendText("----------\nSLAVE TERMINATED");
+        updates.appendText(" ----- \nSLAVE TERMINATED");
         try(ObjectOutputStream objectOutputStream = new ObjectOutputStream(new Socket(IP, port).getOutputStream())){
             objectOutputStream.writeObject(extractedURLs);
         }catch (IOException ignored){}

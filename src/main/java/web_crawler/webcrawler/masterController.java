@@ -139,20 +139,22 @@ public class masterController {
             updates.appendText("Slave number " +(i+1) + " tasked with " + splitSeedURLs.get(i) + "\n");
 
 
-        int num = 0;
-        for (String[] ip : slaveIPs) {
-            try (Socket masterSocket = new Socket(ip[0], Integer.parseInt(ip[1]));
-                 ObjectOutputStream oos = new ObjectOutputStream(masterSocket.getOutputStream())){
+        new Thread(() -> {
+            int num = 0;
+            for (String[] ip : slaveIPs) {
+                try (Socket masterSocket = new Socket(ip[0], Integer.parseInt(ip[1]));
+                     ObjectOutputStream oos = new ObjectOutputStream(masterSocket.getOutputStream())) {
                     System.out.println("SOCKET: " + masterSocket.getInetAddress() + ":" + masterSocket.getPort());
                     oos.writeObject(splitSeedURLs.get(num)); //sends the URL
                     oos.writeObject(duplicate); // sends a boolean flag if duplication is allowed
                     oos.writeObject(levels); // sends the level of recursion
                     num++;
                     slaveCounter++;
-            } catch (IOException e) {
-                 System.out.println(e.getMessage());
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                }
             }
-        }
+        }).start();
 
     }
 

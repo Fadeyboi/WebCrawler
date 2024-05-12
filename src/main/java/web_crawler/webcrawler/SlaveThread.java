@@ -4,6 +4,7 @@ import javafx.scene.control.TextArea;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +25,7 @@ public class SlaveThread implements Runnable {
         this.port = port;
         this.openConnection = true;
         this.updates = updates;
+        update.clear();
     }
 
     public SlaveThread (String port, LinkedList<String> urlLinkedList, boolean duplicate, int levels, TextArea updates) {
@@ -60,7 +62,7 @@ public class SlaveThread implements Runnable {
                                 URLs.remove(i);
                             }
                             secondThread = new Thread(new SlaveThread(this.port, secondThreadLinkedList, this.duplicate,
-                                    this.levels - 1, updates));
+                                    this.levels, updates));
                             secondThread.setName("SecondThread");
                             secondThread.start();
                         }
@@ -91,17 +93,19 @@ public class SlaveThread implements Runnable {
                         if (uri.isAbsolute()) {
                             if (duplicate) {
                                 temporaryArrayList.add(group);
-                                if (uri.getHost() != null)
+                                if (uri.getHost() != null) {
                                     update.add(uri.getHost());
-                                if (uri.getHost().equals(hostname))
-                                    urlLinkedList.add(group);
+                                    if (uri.getHost().equals(hostname))
+                                        urlLinkedList.add(group);
+                                }
                             } else {
                                 if (!temporaryArrayList.contains(group)) {
                                     temporaryArrayList.add(group);
-                                    if (uri.getHost() != null)
+                                    if (uri.getHost() != null) {
                                         update.add(uri.getHost());
-                                    if (uri.getHost().equals(hostname))
-                                        urlLinkedList.add(group);
+                                        if (uri.getHost().equals(hostname))
+                                            urlLinkedList.add(group);
+                                    }
                                 }
                             }
                         }
@@ -123,7 +127,9 @@ public class SlaveThread implements Runnable {
                 sendExtractedURLs(clientSocket);
             }
 
-        } catch (IOException | InterruptedException| IllegalArgumentException | NullPointerException ignored) {}
+        } catch (IOException | InterruptedException| IllegalArgumentException | NullPointerException e) {
+            e.printStackTrace();
+        }
 
     }
 

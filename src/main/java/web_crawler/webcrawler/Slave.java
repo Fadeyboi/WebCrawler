@@ -13,6 +13,7 @@ public class Slave {
                 "created. Waiting for connection from Master\n");
         System.out.println("New slave made, IP is: " + IP + ":" + port);
         Thread t1 = new Thread(new SlaveThread(port, updates));
+        t1.setName("FirstThread");
         t1.start();
     }
 

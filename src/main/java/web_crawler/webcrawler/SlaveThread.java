@@ -5,6 +5,7 @@ import javafx.scene.control.TextArea;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,6 +43,7 @@ public class SlaveThread implements Runnable {
         int maxLinks = 10;
         int linkCount = 0;
         Socket clientSocket = null;
+        Thread secondThread = null;
         try {
             if (openConnection) {
                 try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port))) {
@@ -50,6 +52,19 @@ public class SlaveThread implements Runnable {
                         this.URLs = (ArrayList<String>) ois.readObject();
                         this.duplicate = (boolean) ois.readObject();
                         this.levels = (Integer) ois.readObject();
+                        System.out.println(URLs);
+                        if(URLs.size() > 1) {
+                            LinkedList<String> secondThreadLinkedList = new LinkedList<>();
+                            for (int i = (URLs.size() - 1) / 2; i < URLs.size(); i++) {
+                                secondThreadLinkedList.add(URLs.get(i));
+                                URLs.remove(URLs.get(i));
+                                System.out.println(URLs.get(i));
+                            }
+                            secondThread = new Thread(new SlaveThread(this.port, secondThreadLinkedList, this.duplicate,
+                                    this.levels - 1, updates));
+                            secondThread.setName("SecondThread");
+                            secondThread.start();
+                        }
                         String updateMessage = "Slave Received: [" + URLs.toString() + "\nEnableDuplicates: "
                                 + duplicate + "\nMaxLevels: " + levels + "\n----------\n";
                             updates.setText(updateMessage);
@@ -61,53 +76,36 @@ public class SlaveThread implements Runnable {
                 }
             }
 
-//            System.out.println("All URLs: " + this.URLs);
-//            System.out.println("Duplicate: " + this.duplicate);
-//            System.out.println("Current level: " + this.levels);
+            if (URLs.isEmpty()){
+                return;
+            }
             for (String url: this.URLs ) {
-//                System.out.println("IM STUCK IN URL FOR LOOP");
+                System.out.println("Current URL: " + url + " ----- Thread Name: " + Thread.currentThread().getName());
                 ArrayList<String> temporaryArrayList = new ArrayList<>();
-//                System.out.println("Current URL: " + url);
                 if(URI.create(url).isAbsolute()) {
                     runURL = URI.create(url).toURL();
-                    htmlScanner = new Scanner(runURL.openStream());
-                    StringBuffer htmlContent = new StringBuffer();
-
-                    while (htmlScanner.hasNextLine()) {
-                        htmlContent.append(htmlScanner.nextLine());
-                    }
-                    String regex = "<a[^>]+href=\"(.*?)\"[^>]*>";
-                    Pattern pattern = Pattern.compile(regex);
-
-                    Matcher matcher = pattern.matcher(htmlContent);
+                    InputStream inputStream = runURL.openStream();
+                    String s = new String (inputStream.readAllBytes());
+                    Pattern pattern = Pattern.compile("<a[^>]+href=\"(.*?)\"[^>]*>");
+                    Matcher matcher = pattern.matcher(s);
 
                     while (matcher.find() && linkCount < maxLinks) {
-//                        System.out.println("IM STUCK IN MATCHER");
-                        String group;
-                        if(matcher.group(1) != null)
-                            group = matcher.group(1);
-                        else
-                            break;
+                        String group = matcher.group(1);
                         if(URI.create(group).isAbsolute()){
                             if (duplicate) {
                                 temporaryArrayList.add(group);
                                 urlLinkedList.add(group);
-
                             } else {
                                 if (!temporaryArrayList.contains(group)) {
                                     temporaryArrayList.add(group);
                                     urlLinkedList.add(group);
-
                                 }
                             }
                         }
-
                         linkCount++;
-
                     }
                     extractedURLs.put(url, temporaryArrayList);
                 }
-
             }
             StringBuilder update = new StringBuilder();
             for (String urls : urlLinkedList) {
@@ -117,27 +115,23 @@ public class SlaveThread implements Runnable {
             updates.appendText(update.toString());
 
             if (levels > 0){
-//                System.out.println("Different thread");
-                SlaveThread slaveThread = new SlaveThread(this.port, this.urlLinkedList, this.duplicate,
-                        this.levels-1, updates);
-                Thread t1 = new Thread(slaveThread);
+                Thread t1 = new Thread(new SlaveThread(this.port, this.urlLinkedList, this.duplicate,
+                        this.levels-1, updates));
                 t1.start();
                 t1.join();
-//                System.out.println("T1: " + t1.isAlive());
-//                System.out.println("DONE, GOT ALL DATA");
+            }
+            if(secondThread != null) {
+                secondThread.join();
+            }
+            if(Thread.currentThread().getName().equals("FirstThread")) {
                 sendExtractedURLs(clientSocket);
-            }else {
-                sendExtractedURLs(clientSocket);
-
             }
 
         } catch (IOException e) {
             return;
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            //throw new RuntimeException(e);
         }
-
-
     }
 
     public void sendExtractedURLs(Socket socket) {
@@ -145,12 +139,17 @@ public class SlaveThread implements Runnable {
             return;
         String IP = socket.getInetAddress().getHostAddress();
         int port = 6500;
-        System.out.println("SIZE OF MAP: " + extractedURLs.size());
-        for (ArrayList<String> url : extractedURLs.values()) {
-            for (String url1 : url) {
+        int count = 0;
+        for (Map.Entry<String, ArrayList<String>> entry: extractedURLs.entrySet()) {
+            System.out.println(entry.getKey());
+            count++;
+            for (String url1 : entry.getValue()) {
                 System.out.println(url1);
+                count++;
             }
         }
+        System.out.println("SIZE OF MAP: " + count);
+        updates.appendText("----------\nSLAVE TERMINATED");
         try(ObjectOutputStream objectOutputStream = new ObjectOutputStream(new Socket(IP, port).getOutputStream())){
             objectOutputStream.writeObject(extractedURLs);
 

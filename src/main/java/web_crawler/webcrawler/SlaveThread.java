@@ -38,8 +38,6 @@ public class SlaveThread implements Runnable {
     @Override
     public void run() {
         URL runURL;
-        int maxLinks = 10;
-        int linkCount = 0;
         Socket clientSocket = null;
         Thread secondThread = null;
         try {
@@ -83,7 +81,7 @@ public class SlaveThread implements Runnable {
                     Pattern pattern = Pattern.compile("<a[^>]+href=\"(.*?)\"[^>]*>");
                     Matcher matcher = pattern.matcher(s);
 
-                    while (matcher.find() && linkCount < maxLinks) {
+                    while (matcher.find()) {
                         String group = matcher.group(1);
                         if(URI.create(group).isAbsolute()){
                             if (duplicate) {
@@ -96,7 +94,6 @@ public class SlaveThread implements Runnable {
                                 }
                             }
                         }
-                        linkCount++;
                     }
                     extractedURLs.put(url, temporaryArrayList);
                 }

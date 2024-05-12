@@ -12,7 +12,7 @@ public class SlaveThread implements Runnable {
     private final String port;
     private LinkedList<String> urlLinkedList = new LinkedList<>();
     private ArrayList<String> URLs = new ArrayList<>();
-    private static HashMap<String, ArrayList<String>> extractedURLs = new HashMap<>();
+    private static final HashMap<String, ArrayList<String>> extractedURLs = new HashMap<>();
     private boolean duplicate;
     private int levels;
     private final boolean openConnection;
@@ -40,6 +40,7 @@ public class SlaveThread implements Runnable {
         URL runURL;
         Socket clientSocket = null;
         Thread secondThread = null;
+        StringBuilder update = new StringBuilder();
         try {
             if (openConnection) {
                 try (ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port))) {
@@ -72,6 +73,8 @@ public class SlaveThread implements Runnable {
                 return;
             }
             for (String url: this.URLs ) {
+                String hostname = URI.create(url).getHost();
+                System.out.println("hostname: " + hostname);
                 System.out.println("Current URL: " + url + " ----- Thread Name: " + Thread.currentThread().getName());
                 ArrayList<String> temporaryArrayList = new ArrayList<>();
                 if(URI.create(url).isAbsolute()) {
@@ -80,17 +83,24 @@ public class SlaveThread implements Runnable {
                     String s = new String (inputStream.readAllBytes());
                     Pattern pattern = Pattern.compile("<a[^>]+href=\"(.*?)\"[^>]*>");
                     Matcher matcher = pattern.matcher(s);
-
                     while (matcher.find()) {
                         String group = matcher.group(1);
-                        if(URI.create(group).isAbsolute()){
+                        URI uri = URI.create(group);
+                        if(uri.isAbsolute()){
+                            System.out.println("group hostname: " + uri.getHost());
                             if (duplicate) {
                                 temporaryArrayList.add(group);
-                                urlLinkedList.add(group);
-                            } else {
+                                if(!temporaryArrayList.contains(group))
+                                    update.append(group).append("\n");
+                                if(uri.getHost().equals(hostname))
+                                    urlLinkedList.add(group);
+                            }
+                            else {
                                 if (!temporaryArrayList.contains(group)) {
                                     temporaryArrayList.add(group);
-                                    urlLinkedList.add(group);
+                                    update.append(group).append("\n");
+                                    if(uri.getHost().equals(hostname))
+                                        urlLinkedList.add(group);
                                 }
                             }
                         }
@@ -98,12 +108,9 @@ public class SlaveThread implements Runnable {
                     extractedURLs.put(url, temporaryArrayList);
                 }
             }
-            StringBuilder update = new StringBuilder();
-            for (String urls : urlLinkedList) {
-                update.append(urls).append("\n");
-            }
 
-            updates.appendText(update.toString());
+
+            updates.appendText(update + "----------\n");
 
             if (levels > 0){
                 Thread t1 = new Thread(new SlaveThread(this.port, this.urlLinkedList, this.duplicate,

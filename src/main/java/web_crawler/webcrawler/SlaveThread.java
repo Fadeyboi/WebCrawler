@@ -4,7 +4,6 @@ import javafx.scene.control.TextArea;
 
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,7 +17,8 @@ public class SlaveThread implements Runnable {
     private int levels;
     private final boolean openConnection;
     private final TextArea updates;
-    private static HashSet<String> update = new HashSet<>();
+    private static Set<String> update = new HashSet<>();
+    private static Set<String> checkedUrls = new HashSet<>();
 
 
     public SlaveThread (String port, TextArea updates) {
@@ -26,9 +26,10 @@ public class SlaveThread implements Runnable {
         this.openConnection = true;
         this.updates = updates;
         update.clear();
+        checkedUrls.clear();
     }
 
-    public SlaveThread (String port, LinkedList<String> urlLinkedList, boolean duplicate, int levels, TextArea updates) {
+    public SlaveThread (String port, LinkedList<String> urlLinkedList, boolean duplicate, int levels, TextArea updates, Set<String> checkedUrls) {
         this.port = port;
         this.URLs = new ArrayList<>(urlLinkedList);
         this.urlLinkedList = urlLinkedList;
@@ -36,6 +37,7 @@ public class SlaveThread implements Runnable {
         this.levels = levels;
         this.openConnection = false;
         this.updates = updates;
+        this.checkedUrls = checkedUrls;
     }
 
     @Override
@@ -43,6 +45,7 @@ public class SlaveThread implements Runnable {
         URL runURL;
         Socket clientSocket = null;
         Thread secondThread = null;
+        Pattern pattern = Pattern.compile("<a[^>]+href=\"(.*?)\"[^>]*>");
 
         try {
             if (openConnection) {
@@ -58,17 +61,16 @@ public class SlaveThread implements Runnable {
                             int start = URLs.size() / 2;
                             for (int i = URLs.size() - 1; i >= start; i--) {
                                 secondThreadLinkedList.addFirst(URLs.get(i));
-                                System.out.println(URLs.get(i));
                                 URLs.remove(i);
                             }
                             secondThread = new Thread(new SlaveThread(this.port, secondThreadLinkedList, this.duplicate,
-                                    this.levels, updates));
+                                    this.levels, updates, checkedUrls));
                             secondThread.setName("SecondThread");
                             secondThread.start();
                         }
                         String updateMessage = "Slave Received: [" + URLs.toString() + "\nEnableDuplicates: "
                                 + duplicate + "\nMaxLevels: " + levels + "\nHOSTS VISITED\n----------\n";
-                            updates.setText(updateMessage);
+                        updates.setText(updateMessage);
                     } catch (ClassNotFoundException ignored) {}
                 } catch (IOException ignored) {}
             }
@@ -76,47 +78,51 @@ public class SlaveThread implements Runnable {
             if (URLs.isEmpty()){
                 return;
             }
-            for (String url: this.URLs ) {
-                String hostname = URI.create(url).getHost();
-                System.out.println("hostname: " + hostname);
-                System.out.println("Current URL: " + url + " ----- Thread Name: " + Thread.currentThread().getName());
-                ArrayList<String> temporaryArrayList = new ArrayList<>();
-                if(URI.create(url).isAbsolute()) {
+            for (String url : this.URLs) {
+                if (URI.create(url).isAbsolute() && (checkedUrls.add(url) || duplicate)) {
+                    String hostname = URI.create(url).getHost();
+                    System.out.println("Current URL: " + url + " ----- Thread Name: " + Thread.currentThread().getName());
+                    ArrayList<String> temporaryArrayList = new ArrayList<>();
                     runURL = URI.create(url).toURL();
-                    InputStream inputStream = runURL.openStream();
-                    String s = new String (inputStream.readAllBytes());
-                    Pattern pattern = Pattern.compile("<a[^>]+href=\"(.*?)\"[^>]*>");
-                    Matcher matcher = pattern.matcher(s);
-                    while (matcher.find()) {
-                        String group = matcher.group(1);
-                        URI uri = URI.create(group);
-                        if (uri.isAbsolute()) {
-                            if (duplicate) {
-                                temporaryArrayList.add(group);
-                                if (uri.getHost() != null) {
-                                    update.add(uri.getHost());
-                                    if (uri.getHost().equals(hostname))
-                                        urlLinkedList.add(group);
-                                }
-                            } else {
-                                if (!temporaryArrayList.contains(group)) {
+                    InputStream inputStream = null;
+                    try {
+                        inputStream = new BufferedInputStream(runURL.openStream());
+                    } catch (FileNotFoundException | ConnectException ignored) {
+                        continue;
+                    }
+                    try {
+                        String s = new String(inputStream.readAllBytes());
+                        Matcher matcher = pattern.matcher(s);
+
+                        while (matcher.find()) {
+                            String group = matcher.group(1);
+                            URI uri = null;
+                            try {
+                                uri = URI.create(group);
+                            } catch (IllegalArgumentException ignored) {
+                                continue;
+                            }
+                            if (uri.isAbsolute()) {
+                                if (!temporaryArrayList.contains(group) || duplicate) {
                                     temporaryArrayList.add(group);
                                     if (uri.getHost() != null) {
                                         update.add(uri.getHost());
-                                        if (uri.getHost().equals(hostname))
+                                        if (uri.getHost().equals(hostname)) {
                                             urlLinkedList.add(group);
+                                        }
                                     }
                                 }
                             }
                         }
+                    } finally {
+                        inputStream.close();  // Ensure inputStream is closed after use
                     }
                     extractedURLs.put(url, temporaryArrayList);
                 }
             }
 
-            if (levels > 0){
-                Thread t1 = new Thread(new SlaveThread(this.port, this.urlLinkedList, this.duplicate,
-                        this.levels-1, updates));
+            if (levels > 0) {
+                Thread t1 = new Thread(new SlaveThread(this.port, this.urlLinkedList, this.duplicate, this.levels - 1, updates, checkedUrls));
                 t1.start();
                 t1.join();
             }

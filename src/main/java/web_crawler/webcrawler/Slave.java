@@ -6,7 +6,7 @@ public class Slave {
     private String port;
     private String IP;
 
-    public Slave(String port, String IP, TextArea updates) throws InterruptedException {
+    public Slave(String port, String IP, TextArea updates) {
         this.port = port;
         this.IP = IP;
         updates.appendText("ServerSocket " +

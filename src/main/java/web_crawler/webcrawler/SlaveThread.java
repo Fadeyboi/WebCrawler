@@ -5,7 +5,6 @@ import javafx.scene.control.TextArea;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,7 +38,6 @@ public class SlaveThread implements Runnable {
     @Override
     public void run() {
         URL runURL;
-        Scanner htmlScanner;
         int maxLinks = 10;
         int linkCount = 0;
         Socket clientSocket = null;
@@ -68,12 +66,8 @@ public class SlaveThread implements Runnable {
                         String updateMessage = "Slave Received: [" + URLs.toString() + "\nEnableDuplicates: "
                                 + duplicate + "\nMaxLevels: " + levels + "\n----------\n";
                             updates.setText(updateMessage);
-                    } catch (ClassNotFoundException e) {
-//                        System.out.println(e.getMessage());
-                    }
-                } catch (IOException e) {
-//                    System.out.println(e.getMessage());
-                }
+                    } catch (ClassNotFoundException ignored) {}
+                } catch (IOException ignored) {}
             }
 
             if (URLs.isEmpty()){
@@ -127,11 +121,7 @@ public class SlaveThread implements Runnable {
                 sendExtractedURLs(clientSocket);
             }
 
-        } catch (IOException e) {
-            return;
-        } catch (InterruptedException e) {
-            //throw new RuntimeException(e);
-        }
+        } catch (IOException | InterruptedException ignored) {}
     }
 
     public void sendExtractedURLs(Socket socket) {
@@ -152,10 +142,7 @@ public class SlaveThread implements Runnable {
         updates.appendText("----------\nSLAVE TERMINATED");
         try(ObjectOutputStream objectOutputStream = new ObjectOutputStream(new Socket(IP, port).getOutputStream())){
             objectOutputStream.writeObject(extractedURLs);
-
-        }catch (IOException ignored){
-
-        }
+        }catch (IOException ignored){}
         extractedURLs.clear();
     }
 }

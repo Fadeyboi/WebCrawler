@@ -1,7 +1,6 @@
 package web_crawler.webcrawler;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
@@ -9,8 +8,6 @@ import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.function.UnaryOperator;
 
 public class slaveController {
@@ -22,7 +19,7 @@ public class slaveController {
     TextArea updates;
 
     @FXML
-    private void runSlave() throws IOException, InterruptedException {
+    private void runSlave() throws IOException {
         updates.setText("");
         updates.setVisible(true);
         String portNumber = portInput.getText();

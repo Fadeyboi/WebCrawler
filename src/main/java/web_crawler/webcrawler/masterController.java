@@ -2,17 +2,13 @@ package web_crawler.webcrawler;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import org.w3c.dom.ls.LSOutput;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.function.UnaryOperator;
 
 public class masterController {
@@ -32,7 +28,6 @@ public class masterController {
     public static ArrayList<String> seedURLs = new ArrayList<>();
     public static ArrayList<ArrayList<String>> splitSeedURLs = new ArrayList<>();
     private static HashMap<String, ArrayList<String>> extractedURLs = new HashMap<>();
-    private boolean duplicate;
     private int levels = 0;
     private int slaveCounter = 0;
     String USERNAME = "root";
@@ -40,7 +35,7 @@ public class masterController {
     String URL = "jdbc:mysql://127.0.0.1:3306/mysql";
     Connection DBcon;
     @FXML
-    private void initialize() throws IOException {
+    private void initialize() {
         TextFormatter<String> portFormatter = new TextFormatter<>(filter);
         maxLevels.setTextFormatter(portFormatter);
         new Thread(() -> {
@@ -57,7 +52,6 @@ public class masterController {
                             slaveCounter--;
                             if(slaveCounter == 0) {
                                 addURLtoDatabase(extractedURLs);
-                                System.out.println(extractedURLs);
                             }
                         }catch (IOException e){
                             System.out.println(e.getMessage());
@@ -72,6 +66,7 @@ public class masterController {
             }
         }).start();
     }
+
     private boolean initializeConnection() {
         System.out.println("INITIALIZING CONNECTION");
         try{
@@ -83,21 +78,33 @@ public class masterController {
         }
 
     }
+
     private synchronized void addURLtoDatabase(HashMap<String, ArrayList<String>> temp)  {
         System.out.println("NEW ADDITION METHOD");
         if(DBcon == null)
             if(!initializeConnection())
                 return;
-        java.sql.Date date = new java.sql.Date( new Date().getTime());
+        try {
+            DatabaseMetaData dbm = DBcon.getMetaData();
+            ResultSet tables = dbm.getTables(null, null, "urls", null);
+            if (!tables.next()) {
+                Statement newTable = DBcon.createStatement();
+                String query = "CREATE TABLE urls(uid INT AUTO_INCREMENT PRIMARY KEY, date DATE, Page TEXT, ExtractedURL TEXT)";
+                newTable.executeUpdate(query);
+            }
+        } catch (SQLException ignored) {}
         for(String page: temp.keySet()){
             System.out.println("PAGE: " + page);
             for (String extractedURL: temp.get(page)){
                 try {
-                    Statement newRow = DBcon.createStatement();
-                    String queryStatement = String.format("INSERT INTO urls VALUES(NULL,'%s','%s','%s')", date,page,extractedURL);
-                    newRow.executeUpdate(queryStatement);
-                }catch (SQLException ignored){
-                    System.out.println(ignored.getMessage());
+                    String queryStatement = "INSERT INTO urls (date, Page, ExtractedURL) VALUES (?, ?, ?)";
+                    PreparedStatement newRow = DBcon.prepareStatement(queryStatement);
+                    newRow.setDate(1, new java.sql.Date(new Date().getTime()));
+                    newRow.setString(2, page);
+                    newRow.setString(3, extractedURL);
+                    newRow.executeUpdate();
+                }catch (SQLException e){
+                    System.out.println("Exception here");
                 }
 
                 System.out.println("EXTRACTED URL: " + extractedURL);
@@ -106,13 +113,12 @@ public class masterController {
     }
 
     @FXML
-    private void startButtonPressed() throws IOException {
+    private void startButtonPressed() {
         updates.clear();
         slaveIPs.clear();
         seedURLs.clear();
         splitSeedURLs.clear();
-
-        duplicate = duplicateCheck.isSelected();
+        boolean duplicate = duplicateCheck.isSelected();
         if(!maxLevels.getText().isEmpty()){
             levels = Integer.parseInt(maxLevels.getText());
         }
@@ -130,7 +136,6 @@ public class masterController {
         }
 
         for (int i = 0; i < splitSeedURLs.size(); i++)
-//            System.out.println("Slave " + (i + 1) + ": " + splitSeedURLs.get(i));
             updates.appendText("Slave number " +(i+1) + " tasked with " + splitSeedURLs.get(i) + "\n");
 
 
